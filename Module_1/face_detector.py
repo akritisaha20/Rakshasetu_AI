@@ -106,7 +106,7 @@ if __name__ == "__main__":
 
     try:
         while True:
-            frame = cam. ()
+            frame = cam.get_frame()
             pain = detector.process(frame)
 
             label = f"Pain index: {pain}" if detector.baseline_mouth_norm else "Calibrating..."
