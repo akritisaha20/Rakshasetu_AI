@@ -28,6 +28,7 @@ MIN_CONFIDENCE = 0.5
 class PoseDetector:
     def __init__(self):
         self.pose = mp_pose.Pose(
+            model_complexity=0,  # 0=lite (fastest), 1=full, 2=heavy -- use 0 on Raspberry Pi
             min_detection_confidence=MIN_CONFIDENCE,
             min_tracking_confidence=MIN_CONFIDENCE,
         )
@@ -86,7 +87,7 @@ class PoseDetector:
 if __name__ == "__main__":
     # Standalone test using the webcam/Pi camera + OpenCV window
     import cv2
-    from Module_1.camera_dev import RakshaCamera  # laptop webcam; swap to `camera` on the Pi
+    from camera_dev import RakshaCamera  # laptop webcam; swap to `camera` on the Pi
 
     cam = RakshaCamera().start()
     detector = PoseDetector()
@@ -101,6 +102,9 @@ if __name__ == "__main__":
             label = "FALL SUSPECTED!" if fall else "OK"
             cv2.putText(frame, label, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
             cv2.imshow("Pose Detector Test", frame)
+
+            if fall:
+                print("\n>>> FALL DETECTED! <<<\n")
 
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
