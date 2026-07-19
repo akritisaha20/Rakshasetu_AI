@@ -21,6 +21,14 @@ Real trigger mapping used here, matching the original project architecture
                                   sign/gesture use, helping someone who can't
                                   hear communicate visually instead)
   - CONVERSATION               -> default / normal state
+
+NEW: Calm-Recovery Check
+  Previously, once SAFETY_ALERT triggered, the system stayed locked forever
+  (it required an external/manual reset_safety_alert() call). Now, while in
+  SAFETY_ALERT, the system actively watches for a sustained "calm" reading
+  (low pain_index, no fall_suspected) and automatically clears the alert
+  back to CONVERSATION -- e.g. if the person's expression/posture settles
+  down after a false alarm.
 """
 
 import time
@@ -41,6 +49,10 @@ class AccessibilityMode:
 VERIFY_WINDOW_SECONDS = 5.0   # how long to wait for a "Thumbs_Up" before escalating
 HIGH_PAIN_THRESHOLD = 6       # pain_index at/above this counts as "high"
 HIGH_PAIN_SUSTAIN_SECONDS = 3.0  # how long high pain must persist to escalate
+
+# --- Calm-Recovery settings (new) ---
+CALM_PAIN_THRESHOLD = 3       # pain_index at/below this counts as "calm"
+CALM_SUSTAIN_SECONDS = 3.0    # how long calm must persist to auto-clear an alert
 
 
 class ModeManager:
@@ -65,6 +77,9 @@ class ModeManager:
 
         # High-pain sustain tracking
         self._pain_high_since = None
+
+        # Calm-recovery sustain tracking (new)
+        self._calm_since = None
 
     def process_telemetry(self, data: dict):
         """
@@ -108,6 +123,7 @@ class ModeManager:
 
         # ---- 2. Sustained high pain_index (independent of falls) ----
         if pain_index >= HIGH_PAIN_THRESHOLD:
+            self._calm_since = None  # any high-pain reading resets calm tracking
             if self._pain_high_since is None:
                 self._pain_high_since = time.time()
             elif (time.time() - self._pain_high_since >= HIGH_PAIN_SUSTAIN_SECONDS
@@ -120,17 +136,44 @@ class ModeManager:
 
         # ---- 3. Standard state orchestration ----
         if self.current_state == RobotState.SAFETY_ALERT:
-            # Stay in Safety Alert until something external clears it
-            # (in the full system, Module 3/caregiver ack would reset this)
-            return
+            # NEW: Calm-Recovery Check.
+            # If there's no fall signal AND the expression/pain reading has
+            # settled down (calm) for CALM_SUSTAIN_SECONDS in a row, treat
+            # this as the person signalling "I'm okay now" and auto-clear
+            # the alert -- instead of staying locked forever.
+            is_calm_reading = (not fall_suspected) and (pain_index <= CALM_PAIN_THRESHOLD)
 
-        if hazard_in_path:
-            self._set_accessibility(AccessibilityMode.VISION, data, hazard_type)
-        elif detected_gesture == "Wave":
-            self._set_accessibility(AccessibilityMode.HEARING, data, None)
-        else:
-            self.accessibility_mode = AccessibilityMode.NONE
-            self._set_state(RobotState.CONVERSATION, data)
+            if is_calm_reading:
+                if self._calm_since is None:
+                    self._calm_since = time.time()
+                elif time.time() - self._calm_since >= CALM_SUSTAIN_SECONDS:
+                    print("[Decision Engine] Calm expression sustained. "
+                          "Auto-clearing Safety Alert -- resuming normal operation.")
+                    self._calm_since = None
+                    self._pain_high_since = None
+                    old_state = self.current_state
+                    self.current_state = RobotState.CONVERSATION
+                    self.accessibility_mode = AccessibilityMode.NONE
+                    if self.on_state_change:
+                        self.on_state_change(old_state, RobotState.CONVERSATION, data)
+                    if self.on_verification_prompt:
+                        self.on_verification_prompt("Good to see you're calm now. Resuming normal mode.")
+                    # fall through to step 4 below so hazard/gesture checks
+                    # still run this same frame instead of waiting one extra cycle
+                else:
+                    return  # calm streak in progress but not long enough yet
+            else:
+                self._calm_since = None  # reading wasn't calm -- reset the streak
+                return
+
+        if self.current_state != RobotState.SAFETY_ALERT:
+            if hazard_in_path:
+                self._set_accessibility(AccessibilityMode.VISION, data, hazard_type)
+            elif detected_gesture == "Wave":
+                self._set_accessibility(AccessibilityMode.HEARING, data, None)
+            else:
+                self.accessibility_mode = AccessibilityMode.NONE
+                self._set_state(RobotState.CONVERSATION, data)
 
     def _set_accessibility(self, sub_mode, data, hazard_type):
         mode_changed = sub_mode != self.accessibility_mode
@@ -159,7 +202,10 @@ class ModeManager:
               f"Would notify Module 3 (hardware freeze) and Module 4 (cloud SOS) here.")
 
     def reset_safety_alert(self):
-        """Call this once a caregiver/teammate module acknowledges the emergency."""
+        """Manual override: call this if a caregiver/teammate module
+        acknowledges the emergency directly (e.g. a dashboard button)."""
         print("[Decision Engine] Safety alert manually cleared. Resuming normal operation.")
         self.current_state = RobotState.CONVERSATION
         self.accessibility_mode = AccessibilityMode.NONE
+        self._calm_since = None
+        self._pain_high_since = None
