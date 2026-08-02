@@ -1,416 +1,937 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>RakshaSetu — Family Check-In</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RakshaSetu AI — Caregiver Dashboard</title>
 <style>
   :root {
-    --bg: #FAF6EF;
-    --paper: #FFFFFF;
-    --ink: #2B2A28;
-    --muted: #8A8479;
-    --calm: #5B7A6D;
-    --calm-soft: #E5EDE9;
-    --gold: #C9A227;
-    --alert: #B33A3A;
-    --alert-soft: #FBEAEA;
-    --line: #E7E1D6;
+    --primary: #1E3A8A;
+    --success: #10B981;
+    --warning: #F59E0B;
+    --danger: #EF4444;
+    --bg: #F8FAFC;
+    --card: #FFFFFF;
+    --border: #EEF2F7;
+    --text: #0F172A;
+    --text-secondary: #64748B;
+    --text-muted: #94A3B8;
   }
-
   * { box-sizing: border-box; }
-
   body {
     margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
     background: var(--bg);
-    color: var(--ink);
-    font-family: 'Inter', sans-serif;
-    min-height: 100vh;
-    transition: background 0.6s ease;
+    color: var(--text);
   }
+  .layout { display: flex; min-height: 100vh; }
 
-  body.alert-active {
-    background: #FDF3F3;
-  }
-
-  .wrap {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 48px 24px 80px;
-  }
-
-  header {
+  /* Sidebar */
+  .sidebar {
+    width: 240px;
+    background: #fff;
+    border-right: 1px solid var(--border);
+    padding: 20px 14px;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 40px;
-  }
-
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .brand-name {
-    font-family: 'Fraunces', serif;
-    font-size: 20px;
-    font-weight: 500;
-    letter-spacing: 0.01em;
-  }
-
-  .brand-sub {
-    font-size: 12px;
-    color: var(--muted);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  /* The presence dot -- the signature element */
-  .presence {
-    position: relative;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: var(--calm);
+    flex-direction: column;
     flex-shrink: 0;
   }
-
-  .presence::before {
-    content: '';
-    position: absolute;
-    inset: -6px;
-    border-radius: 50%;
-    background: var(--calm);
-    opacity: 0.35;
-    animation: breathe 3.2s ease-in-out infinite;
+  .brand { display: flex; align-items: center; gap: 10px; padding: 0 6px; margin-bottom: 20px; }
+  .brand-icon {
+    width: 34px; height: 34px; border-radius: 9px; background: var(--primary);
+    display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px;
+  }
+  .brand-title { font-size: 14px; font-weight: 600; margin: 0; }
+  .brand-tagline { font-size: 10.5px; color: var(--text-muted); margin: 0; }
+  .nav-label {
+    font-size: 11px; font-weight: 500; color: var(--text-muted);
+    margin: 14px 6px 8px; letter-spacing: 0.4px; text-transform: uppercase;
+  }
+  .nav-btn {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 9px 10px; border-radius: 10px; border: none; background: transparent;
+    color: #475569; font-size: 13.5px; cursor: pointer; text-align: left; margin-bottom: 2px;
+  }
+  .nav-btn.active { background: rgba(30,58,138,0.08); color: var(--primary); font-weight: 500; }
+  .nav-btn:hover:not(.active) { background: #F8FAFC; }
+  .spacer { flex: 1; }
+  .emergency-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 11px 10px; border-radius: 10px; border: none; background: var(--danger);
+    color: #fff; font-size: 13px; font-weight: 500; cursor: pointer;
   }
 
-  body.alert-active .presence,
-  body.alert-active .presence::before {
-    background: var(--alert);
+  /* Main */
+  .main { flex: 1; padding: 28px; overflow-y: auto; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+  h2.title { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  p.subtitle { font-size: 14px; color: var(--text-secondary); margin: 0 0 16px; }
+
+  .card {
+    background: var(--card); border-radius: 16px; border: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(15,23,42,0.06);
+  }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+
+  /* Header */
+  .elder-header { padding: 20px; margin-bottom: 20px; }
+  .elder-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  .elder-id { display: flex; align-items: center; gap: 14px; }
+  .avatar {
+    width: 52px; height: 52px; border-radius: 50%; background: rgba(30,58,138,0.1);
+    display: flex; align-items: center; justify-content: center; font-weight: 600;
+    color: var(--primary); font-size: 18px;
+  }
+  .elder-name { font-size: 17px; font-weight: 600; margin: 0; }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px;
+    font-size: 13px; font-weight: 500; margin-top: 4px;
+  }
+  .status-pill.safe { background: #D1FAE5; color: #065F46; }
+  .status-pill.alert { background: #FEE2E2; color: #991B1B; }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .status-dot.safe { background: var(--success); }
+  .status-dot.alert { background: var(--danger); }
+  .live-btn {
+    display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px;
+    border: none; background: var(--primary); color: #fff; font-size: 14px; font-weight: 500; cursor: pointer;
+  }
+  .metrics-row {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 18px;
+    padding-top: 16px; border-top: 1px solid var(--border);
+  }
+  .metric-label { font-size: 11px; color: var(--text-muted); margin: 0; }
+  .metric-value { font-size: 13px; font-weight: 500; margin: 0; }
+
+  /* Nav cards */
+  .nav-card {
+    text-align: left; padding: 18px; border-radius: 16px; border: 1px solid var(--border);
+    background: #fff; cursor: pointer; display: flex; flex-direction: column; gap: 10px;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.06);
+  }
+  .nav-card-icon {
+    width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center;
+    justify-content: center; font-size: 16px;
+  }
+  .nav-card p.label { font-size: 15px; font-weight: 500; margin: 0; }
+  .nav-card p.sub { font-size: 13px; color: var(--text-secondary); margin: 2px 0 0; }
+
+  /* Timeline */
+  .timeline-row {
+    display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-bottom: 1px solid #F1F5F9;
+  }
+  .timeline-row:last-child { border-bottom: none; }
+  .timeline-time { font-size: 13px; color: var(--text-muted); width: 90px; flex-shrink: 0; }
+  .timeline-label { font-size: 14px; }
+
+  /* Metric blocks */
+  .metric-block { padding: 18px; }
+  .metric-block p.label { font-size: 12px; color: var(--text-muted); margin: 0; }
+  .metric-block p.value { font-size: 20px; font-weight: 600; margin: 6px 0 0; }
+
+  /* Score rings */
+  .rings-row { display: flex; justify-content: space-around; padding: 24px; }
+  .ring-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .ring-wrap span { font-size: 13px; color: var(--text-secondary); }
+
+  /* Trend chart */
+  .trend-chart { display: flex; align-items: flex-end; gap: 20px; height: 140px; padding: 24px; }
+  .trend-bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; }
+  .trend-bar { width: 100%; max-width: 40px; background: var(--primary); border-radius: 6px 6px 0 0; }
+  .trend-bar-wrap span { font-size: 12px; color: var(--text-secondary); }
+
+  /* Tags / chips */
+  .tag-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 20px; }
+  .tag {
+    font-size: 13px; padding: 6px 12px; border-radius: 999px; background: #EDE9FE; color: #5B21B6;
+  }
+  .section-label { font-size: 13px; font-weight: 500; color: var(--text-secondary); margin: 0 0 10px; padding: 20px 20px 0; }
+  .family-row { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 20px 20px; }
+  .family-chip { display: flex; align-items: center; gap: 8px; }
+  .family-avatar {
+    width: 32px; height: 32px; border-radius: 50%; background: rgba(30,58,138,0.1);
+    color: var(--primary); font-size: 13px; font-weight: 500; display: flex;
+    align-items: center; justify-content: center;
+  }
+  .family-name { font-size: 13px; font-weight: 500; margin: 0; }
+  .family-relation { font-size: 12px; color: var(--text-muted); margin: 0; }
+  .reminder-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+  .reminder-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--warning); }
+
+  /* Waveform */
+  .waveform { display: flex; align-items: center; gap: 3px; height: 40px; margin-bottom: 14px; padding: 24px 24px 0; }
+  .wave-bar { width: 3px; border-radius: 2px; background: #CBD5E1; }
+  .quote { font-size: 13px; color: #475569; font-style: italic; margin: 0 0 16px; padding: 0 24px; }
+  .btn-row { display: flex; gap: 10px; padding: 0 24px 24px; flex-wrap: wrap; }
+  .btn-primary, .btn-secondary {
+    display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px;
+    font-size: 14px; font-weight: 500; cursor: pointer;
+  }
+  .btn-primary { border: none; background: var(--primary); color: #fff; }
+  .btn-secondary { border: 1px solid #E2E8F0; background: #fff; color: var(--text); }
+
+  /* Toggle rows */
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    padding: 16px 18px; border-bottom: 1px solid #F1F5F9;
+  }
+  .toggle-row:last-child { border-bottom: none; }
+  .toggle-left { display: flex; align-items: center; gap: 12px; }
+  .toggle-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .toggle-label { font-size: 14px; font-weight: 500; margin: 0; }
+  .toggle-sub { font-size: 12.5px; color: var(--text-muted); margin: 2px 0 0; }
+  .toggle-switch { width: 40px; height: 22px; border-radius: 999px; position: relative; cursor: pointer; }
+  .toggle-knob { width: 16px; height: 16px; border-radius: 50%; background: #fff; position: absolute; top: 3px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); transition: left 0.15s; }
+
+  /* Summary gradient card */
+  .summary-card {
+    border-radius: 16px; padding: 28px; background: linear-gradient(135deg, var(--primary), #334155); color: #fff;
+  }
+  .summary-checklist { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 20px; }
+  .check-item { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  .check-circle {
+    width: 18px; height: 18px; border-radius: 50%; background: rgba(255,255,255,0.2);
+    display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0;
   }
 
-  body.alert-active .presence::before {
-    animation: pulse-alert 1s ease-in-out infinite;
+  .placeholder-card { padding: 40px; text-align: center; }
+  .placeholder-card p { font-size: 14px; color: var(--text-muted); margin: 0; }
+
+  /* Overlays */
+  .overlay {
+    position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+    z-index: 50; padding: 24px;
   }
-
-  @keyframes breathe {
-    0%, 100% { transform: scale(0.85); opacity: 0.25; }
-    50% { transform: scale(1.35); opacity: 0.5; }
+  .overlay.show { display: flex; }
+  .overlay-emergency { background: rgba(239,68,68,0.97); flex-direction: column; color: #fff; }
+  .overlay-close { position: absolute; top: 20px; right: 20px; background: none; border: none; color: #fff; cursor: pointer; font-size: 20px; }
+  .emergency-title { font-size: 22px; font-weight: 600; margin: 16px 0 4px; text-align: center; }
+  .emergency-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; width: 100%; max-width: 320px; margin-top: 32px; }
+  .emergency-action-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 8px;
+    border-radius: 12px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.12);
+    color: #fff; font-size: 13px; font-weight: 500; cursor: pointer;
   }
-
-  @keyframes pulse-alert {
-    0%, 100% { transform: scale(0.9); opacity: 0.4; }
-    50% { transform: scale(1.6); opacity: 0.75; }
+  .emergency-action-btn.filled { background: #fff; color: var(--danger); }
+  .overlay-live { background: rgba(15,23,42,0.9); }
+  .live-frame { width: 100%; max-width: 380px; }
+  .live-video {
+    aspect-ratio: 4/3; border-radius: 12px; background: #1E293B; display: flex; align-items: center;
+    justify-content: center; position: relative; color: #475569; font-size: 40px;
   }
-
-  .headline-card {
-    background: var(--paper);
-    border-radius: 20px;
-    padding: 40px 36px;
-    border: 1px solid var(--line);
-    margin-bottom: 32px;
+  .live-hud { position: absolute; top: 12px; left: 12px; font-size: 12px; color: #fff; display: flex; gap: 12px; }
+  .live-controls { display: flex; justify-content: center; gap: 20px; margin-top: 20px; }
+  .live-control { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .live-control-icon {
+    width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.1);
+    display: flex; align-items: center; justify-content: center; color: #fff;
   }
+  .live-control span { font-size: 11px; color: #CBD5E1; }
 
-  body.alert-active .headline-card {
-    background: var(--alert-soft);
-    border-color: #E8C4C4;
-  }
-
-  .eyebrow {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--calm);
-    font-weight: 600;
-    margin-bottom: 14px;
-  }
-
-  body.alert-active .eyebrow { color: var(--alert); }
-
-  .headline {
-    font-family: 'Fraunces', serif;
-    font-size: 30px;
-    font-weight: 500;
-    line-height: 1.3;
-    margin: 0 0 12px;
-  }
-
-  .sub-headline {
-    color: var(--muted);
-    font-size: 15px;
-    margin: 0;
-  }
-
-  .sub-headline .mono { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
-
-  .action-row {
-    margin-top: 24px;
-    display: none;
-  }
-
-  body.alert-active .action-row { display: block; }
-
-  .btn-live {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--alert);
-    color: white;
-    border: none;
-    padding: 12px 22px;
-    border-radius: 10px;
-    font-family: 'Inter', sans-serif;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .stat-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    margin-bottom: 32px;
-  }
-
-  .stat {
-    background: var(--paper);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 18px 20px;
-  }
-
-  .stat-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--muted);
-    margin-bottom: 6px;
-  }
-
-  .stat-value {
-    font-size: 20px;
-    font-weight: 600;
-  }
-
-  .stat-value.accessibility { color: var(--gold); }
-
-  .log-section-title {
-    font-family: 'Fraunces', serif;
-    font-size: 17px;
-    font-weight: 500;
-    margin: 0 0 4px;
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-  }
-
-  .log-section-sub {
-    color: var(--muted);
-    font-size: 13px;
-    margin: 0 0 18px;
-  }
-
-  .log-divider {
-    height: 1px;
-    background: linear-gradient(90deg, var(--gold), transparent 65%);
-    margin-bottom: 18px;
-  }
-
-  .log-entry {
-    display: flex;
-    gap: 16px;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--line);
-    font-size: 14px;
-  }
-
-  .log-entry:last-child { border-bottom: none; }
-
-  .log-time {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    color: var(--muted);
-    white-space: nowrap;
-    padding-top: 1px;
-    min-width: 64px;
-  }
-
-  .log-text { color: var(--ink); }
-
-  .log-badge {
-    display: inline-block;
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    padding: 2px 8px;
-    border-radius: 6px;
-    margin-left: 8px;
-    background: var(--calm-soft);
-    color: var(--calm);
-  }
-
-  .log-badge.alert { background: var(--alert-soft); color: var(--alert); }
-  .log-badge.accessibility { background: #FBF3DC; color: #8A6D14; }
-
-  .empty-state {
-    color: var(--muted);
-    font-size: 14px;
-    padding: 24px 0;
-    text-align: center;
-  }
-
-  footer {
-    margin-top: 48px;
-    text-align: center;
-    color: var(--muted);
-    font-size: 12px;
-  }
+  .conn-status { font-size: 12px; color: var(--text-muted); margin-left: 6px; }
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <div class="brand">
-        <div class="presence" id="presenceDot"></div>
-        <div>
-          <div class="brand-name">RakshaSetu</div>
-          <div class="brand-sub">Family Check-In</div>
-        </div>
-      </div>
-    </header>
 
-    <div class="headline-card" id="headlineCard">
-      <div class="eyebrow" id="eyebrow">All calm</div>
-      <h1 class="headline" id="headline">Everything looks good right now.</h1>
-      <p class="sub-headline" id="subHeadline">
-        Last update <span class="mono" id="lastUpdate">—</span>
-      </p>
-      <div class="action-row">
-        <button class="btn-live">● View live feed</button>
+<div class="layout">
+  <div class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">&#128737;</div>
+      <div>
+        <p class="brand-title">RakshaSetu AI</p>
+        <p class="brand-tagline">Always connected, even far away</p>
       </div>
     </div>
 
-    <div class="stat-row">
-      <div class="stat">
-        <div class="stat-label">Current activity</div>
-        <div class="stat-value" id="modeValue">—</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Battery</div>
-        <div class="stat-value" id="batteryValue">—</div>
-      </div>
-    </div>
+    <p class="nav-label">Caregiver suite</p>
+    <button class="nav-btn active" data-screen="home">&#127968; Home dashboard</button>
+    <button class="nav-btn" data-screen="safety">&#128737; Safety monitor</button>
+    <button class="nav-btn" data-screen="wellness">&#10084; Wellness &amp; analytics</button>
+    <button class="nav-btn" data-screen="memory">&#129504; Memory &amp; companion</button>
+    <button class="nav-btn" data-screen="family">&#128222; Family connect</button>
+    <button class="nav-btn" data-screen="accessibility">&#128065; Accessibility profile</button>
+    <button class="nav-btn" data-screen="summary">&#128196; Daily AI summary</button>
 
-    <div class="log-section-title">Recent moments</div>
-    <p class="log-section-sub">What's happened in the last few minutes</p>
-    <div class="log-divider"></div>
-    <div id="logList">
-      <div class="empty-state">Waiting for the first update…</div>
-    </div>
+    <p class="nav-label">System modules</p>
+    <button class="nav-btn" data-screen="m1">Module 1</button>
+    <button class="nav-btn" data-screen="m2">Module 2</button>
+    <button class="nav-btn" data-screen="m3">Module 3</button>
+    <button class="nav-btn" data-screen="m4">Module 4</button>
+    <button class="nav-btn" data-screen="m5">Module 5</button>
 
-    <footer>Reading live from Module 4 · updates every 2 seconds</footer>
+    <div class="spacer"></div>
+    <button class="emergency-btn" id="simulateEmergencyBtn">&#9888; Simulate emergency fall</button>
   </div>
 
+  <div class="main">
+
+    <!-- HOME -->
+    <div class="screen active" id="screen-home">
+      <div class="card elder-header">
+        <div class="elder-top">
+          <div class="elder-id">
+            <div class="avatar">GS</div>
+            <div>
+              <p class="elder-name">Grandma Sarla <span class="conn-status" id="connStatus">(demo data)</span></p>
+              <span class="status-pill safe" id="statusPill"><span class="status-dot safe"></span>Safe &amp; active</span>
+            </div>
+          </div>
+          <button class="live-btn" id="liveViewBtn">&#128249; Start live view</button>
+        </div>
+        <div class="metrics-row">
+          <div><p class="metric-label">Battery</p><p class="metric-value" id="metricBattery">82%</p></div>
+          <div><p class="metric-label">Location</p><p class="metric-value" id="metricLocation">Living room</p></div>
+          <div><p class="metric-label">Last interaction</p><p class="metric-value" id="metricLast">5 min ago</p></div>
+        </div>
+      </div>
+
+      <h2 class="title">Overview</h2>
+      <div class="grid-2" style="margin-bottom:24px;">
+        <button class="nav-card" data-screen="safety">
+          <div class="nav-card-icon" style="background:rgba(30,58,138,0.1);color:var(--primary);">&#128737;</div>
+          <p class="label">Safety</p><p class="sub">No falls today</p>
+        </button>
+        <button class="nav-card" data-screen="wellness">
+          <div class="nav-card-icon" style="background:rgba(239,68,68,0.1);color:var(--danger);">&#10084;</div>
+          <p class="label">Wellness</p><p class="sub">Mood score 85%</p>
+        </button>
+        <button class="nav-card" data-screen="memory">
+          <div class="nav-card-icon" style="background:rgba(124,58,237,0.1);color:#7C3AED;">&#129504;</div>
+          <p class="label">Memory</p><p class="sub">3 known preferences</p>
+        </button>
+        <button class="nav-card" data-screen="family">
+          <div class="nav-card-icon" style="background:rgba(16,185,129,0.1);color:var(--success);">&#128222;</div>
+          <p class="label">Family connect</p><p class="sub">2 members</p>
+        </button>
+      </div>
+
+      <h2 class="title">Recent activity</h2>
+      <div class="card" id="activityLog"></div>
+    </div>
+
+    <!-- SAFETY -->
+    <div class="screen" id="screen-safety">
+      <h2 class="title">Safety monitor</h2>
+      <p class="subtitle">Real-time monitoring for falls, hazards and system status</p>
+      <div class="grid-3" style="margin-bottom:24px;">
+        <div class="card metric-block"><p class="label">Fall detection</p><p class="value" style="color:var(--success)" id="safetyFall">No falls</p></div>
+        <div class="card metric-block"><p class="label">Hazard alerts</p><p class="value" style="color:var(--success)" id="safetyHazard">0</p></div>
+        <div class="card metric-block"><p class="label">System health</p><p class="value" style="color:var(--primary)">Normal</p></div>
+      </div>
+      <h2 class="title">Today's timeline</h2>
+      <div class="card" id="safetyTimeline"></div>
+    </div>
+
+    <!-- WELLNESS -->
+    <div class="screen" id="screen-wellness">
+      <h2 class="title">Wellness &amp; analytics</h2>
+      <p class="subtitle">Activity, mood, and routine adherence over time</p>
+      <div class="card rings-row" style="margin-bottom:20px;" id="wellnessRings">
+        <div class="ring-wrap"><svg width="88" height="88" viewBox="0 0 88 88"><circle cx="44" cy="44" r="34" fill="none" stroke="#EEF2F7" stroke-width="8"/><circle cx="44" cy="44" r="34" fill="none" stroke="var(--primary)" stroke-width="8" stroke-dasharray="213.6" stroke-dashoffset="17.1" stroke-linecap="round" transform="rotate(-90 44 44)"/><text x="44" y="49" text-anchor="middle" font-size="18" font-weight="500" fill="#0F172A" id="wellnessScoreText">92%</text></svg><span id="wellnessScoreLabel">Activity</span></div>
+        <div class="ring-wrap"><svg width="88" height="88" viewBox="0 0 88 88"><circle cx="44" cy="44" r="34" fill="none" stroke="#EEF2F7" stroke-width="8"/><circle cx="44" cy="44" r="34" fill="none" stroke="var(--danger)" stroke-width="8" stroke-dasharray="213.6" stroke-dashoffset="32" stroke-linecap="round" transform="rotate(-90 44 44)"/><text x="44" y="49" text-anchor="middle" font-size="18" font-weight="500" fill="#0F172A">85%</text></svg><span>Mood</span></div>
+        <div class="ring-wrap"><svg width="88" height="88" viewBox="0 0 88 88"><circle cx="44" cy="44" r="34" fill="none" stroke="#EEF2F7" stroke-width="8"/><circle cx="44" cy="44" r="34" fill="none" stroke="var(--success)" stroke-width="8" stroke-dasharray="213.6" stroke-dashoffset="21.4" stroke-linecap="round" transform="rotate(-90 44 44)"/><text x="44" y="49" text-anchor="middle" font-size="18" font-weight="500" fill="#0F172A">90%</text></svg><span>Routine</span></div>
+      </div>
+      <p class="subtitle" id="wellnessAnomalyNote" style="display:none;color:var(--danger);"></p>
+      <h2 class="title">4-day trend</h2>
+      <div class="card trend-chart">
+        <div class="trend-bar-wrap"><div class="trend-bar" style="height:82px;"></div><span>Mon</span></div>
+        <div class="trend-bar-wrap"><div class="trend-bar" style="height:73px;"></div><span>Tue</span></div>
+        <div class="trend-bar-wrap"><div class="trend-bar" style="height:100px;"></div><span>Wed</span></div>
+        <div class="trend-bar-wrap"><div class="trend-bar" style="height:68px;"></div><span>Thu</span></div>
+      </div>
+      <h2 class="title" style="margin-top:24px;">Routine</h2>
+      <div class="grid-3" id="routineBlocks">
+        <div class="card metric-block"><p class="label">Wake time (today)</p><p class="value" style="color:var(--primary)" id="routineWake">—</p></div>
+        <div class="card metric-block"><p class="label">Last activity (today)</p><p class="value" style="color:var(--primary)" id="routineSleep">—</p></div>
+        <div class="card metric-block"><p class="label">Interactions today</p><p class="value" style="color:var(--primary)" id="routineCount">—</p></div>
+      </div>
+      <div class="card metric-block" style="margin-top:14px;">
+        <p class="label">Medication adherence (today)</p>
+        <p class="value" style="color:var(--success)" id="medicationAdherence">—</p>
+      </div>
+    </div>
+
+    <!-- MEMORY -->
+    <div class="screen" id="screen-memory">
+      <h2 class="title">Memory &amp; companion</h2>
+      <p class="subtitle">What RakshaSetu knows and remembers</p>
+      <div class="card" style="margin-bottom:16px;">
+        <p class="section-label">Known preferences</p>
+        <div class="tag-row" id="preferencesTags" style="padding-top:0;">
+          <span class="tag">Bhajans</span><span class="tag">Morning tea</span><span class="tag">Evening walk</span>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px;">
+        <p class="section-label">Family directory</p>
+        <div class="family-row" id="familyDirectory">
+          <div class="family-chip"><div class="family-avatar">N</div><div><p class="family-name">Neha</p><p class="family-relation">Daughter</p></div></div>
+          <div class="family-chip"><div class="family-avatar">A</div><div><p class="family-name">Amit</p><p class="family-relation">Son</p></div></div>
+        </div>
+      </div>
+      <div class="card" style="padding:20px;">
+        <p class="section-label" style="padding:0 0 10px;">Active reminders</p>
+        <div id="remindersList">
+          <div class="reminder-row"><div class="reminder-dot"></div><span>Medicine at 8 PM</span></div>
+          <div class="reminder-row"><div class="reminder-dot"></div><span>Doctor visit Friday</span></div>
+        </div>
+      </div>
+      <div class="card" style="padding:20px;margin-top:16px;">
+        <p class="section-label" style="padding:0 0 10px;">Mark medication taken</p>
+        <div class="btn-row" id="medicationButtons" style="padding:0;flex-wrap:wrap;"></div>
+      </div>
+    </div>
+
+    <!-- FAMILY CONNECT -->
+    <div class="screen" id="screen-family">
+      <h2 class="title">Family connect</h2>
+      <p class="subtitle">Stay close, even from far away</p>
+      <div class="card" style="margin-bottom:16px;">
+        <p class="section-label">Send a voice message</p>
+        <div class="waveform" id="waveform"></div>
+        <p class="quote">"Mummy dawa lena mat bhoolna."</p>
+        <div class="btn-row">
+          <button class="btn-primary" id="familyRecordBtn">&#127908; Record</button>
+          <button class="btn-secondary" id="familyPlayBtn">&#9654; Play on robot</button>
+        </div>
+        <p id="familyStatusText" style="font-size:12px;color:#94A3B8;padding:0 24px;margin:0 0 10px;"></p>
+        <audio id="familyPlayback" controls style="display:none;width:calc(100% - 48px);margin:0 24px 20px;"></audio>
+      </div>
+      <div class="card" style="padding:20px;">
+        <p class="section-label" style="padding:0 0 12px;">Remote controls</p>
+        <div class="btn-row" style="padding:0;">
+          <button class="btn-secondary" id="familyVideoBtn">&#128249; Video call</button>
+          <button class="btn-secondary" id="familyPhoneBtn">&#128222; Phone call</button>
+        </div>
+        <p id="familyCallStatus" style="font-size:12px;color:#94A3B8;margin:10px 0 0;"></p>
+      </div>
+    </div>
+
+    <!-- ACCESSIBILITY PROFILE -->
+    <div class="screen" id="screen-accessibility">
+      <h2 class="title">Accessibility profile</h2>
+      <p class="subtitle">Adapts how RakshaSetu communicates, based on this profile</p>
+      <div class="card">
+        <div class="toggle-row">
+          <div class="toggle-left">
+            <div class="toggle-icon" style="background:rgba(30,58,138,0.1);color:var(--primary);">&#128065;</div>
+            <div><p class="toggle-label">Vision assistance</p><p class="toggle-sub">Voice guidance and audio navigation</p></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;" class="a11y-toggle-wrap" data-need="vision_impaired">
+            <span style="font-size:12px;font-weight:500;" class="a11y-status">On</span>
+            <div class="toggle-switch a11y-switch"><div class="toggle-knob a11y-knob"></div></div>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-left">
+            <div class="toggle-icon" style="background:#F1F5F9;color:var(--text-muted);">&#128266;</div>
+            <div><p class="toggle-label">Hearing assistance</p><p class="toggle-sub">Large text and visual alerts</p></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;" class="a11y-toggle-wrap" data-need="hearing_impaired">
+            <span style="font-size:12px;font-weight:500;" class="a11y-status">Off</span>
+            <div class="toggle-switch a11y-switch"><div class="toggle-knob a11y-knob"></div></div>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-left">
+            <div class="toggle-icon" style="background:rgba(30,58,138,0.1);color:var(--primary);">T</div>
+            <div><p class="toggle-label">Dyslexia support</p><p class="toggle-sub">Simplified text, high contrast display</p></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;" class="a11y-toggle-wrap" data-need="dyslexia">
+            <span style="font-size:12px;font-weight:500;" class="a11y-status">Off</span>
+            <div class="toggle-switch a11y-switch"><div class="toggle-knob a11y-knob"></div></div>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-left">
+            <div class="toggle-icon" style="background:#F1F5F9;color:var(--text-muted);">&#9855;</div>
+            <div><p class="toggle-label">Mobility support</p><p class="toggle-sub">Slower, extra-careful movement speed</p></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;" class="a11y-toggle-wrap" data-need="mobility_challenge">
+            <span style="font-size:12px;font-weight:500;" class="a11y-status">Off</span>
+            <div class="toggle-switch a11y-switch"><div class="toggle-knob a11y-knob"></div></div>
+          </div>
+        </div>
+      </div>
+      <p class="subtitle" id="a11yConnNote" style="margin-top:12px;">Toggles need the backend running to save changes; showing demo state otherwise.</p>
+    </div>
+
+    <!-- DAILY SUMMARY -->
+    <div class="screen" id="screen-summary">
+      <h2 class="title">Daily AI summary</h2>
+      <div class="summary-card">
+        <p style="font-size:13px;opacity:0.8;margin:0;">Today's summary</p>
+        <p style="font-size:26px;font-weight:600;margin:8px 0 4px;">84% positive day</p>
+        <div class="summary-checklist">
+          <div class="check-item"><div class="check-circle">&#10003;</div>Medicine taken</div>
+          <div class="check-item"><div class="check-circle">&#10003;</div>Walk completed</div>
+          <div class="check-item"><div class="check-circle">&#10003;</div>5 interactions</div>
+          <div class="check-item"><div class="check-circle">&#10003;</div>No falls</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODULE PLACEHOLDERS -->
+    <div class="screen" id="screen-m1"><h2 class="title">Module 1</h2><div class="card placeholder-card"><p>Your existing Module 1 content goes here.</p></div></div>
+    <div class="screen" id="screen-m2"><h2 class="title">Module 2</h2><div class="card placeholder-card"><p>Your existing Module 2 content goes here.</p></div></div>
+    <div class="screen" id="screen-m3"><h2 class="title">Module 3</h2><div class="card placeholder-card"><p>Your existing Module 3 content goes here.</p></div></div>
+    <div class="screen" id="screen-m4"><h2 class="title">Module 4</h2><div class="card placeholder-card"><p>Your existing Module 4 content goes here.</p></div></div>
+    <div class="screen" id="screen-m5"><h2 class="title">Module 5</h2><div class="card placeholder-card"><p>Your existing Module 5 content goes here.</p></div></div>
+
+  </div>
+</div>
+
+<!-- Emergency overlay -->
+<div class="overlay overlay-emergency" id="emergencyOverlay">
+  <button class="overlay-close" id="closeEmergency">&#10005;</button>
+  <div style="font-size:56px;">&#9888;</div>
+  <p class="emergency-title">Potential fall detected</p>
+  <p style="font-size:14px;opacity:0.9;margin:0 0 4px;">No response received</p>
+  <p style="font-size:13px;opacity:0.75;" id="emergencyTime">11:42 AM</p>
+  <div class="emergency-actions">
+    <button class="emergency-action-btn">&#128249;<br>Live view</button>
+    <button class="emergency-action-btn">&#127908;<br>Talk now</button>
+    <button class="emergency-action-btn">&#128222;<br>Call caregiver</button>
+    <button class="emergency-action-btn filled">&#9888;<br>Emergency contact</button>
+  </div>
+</div>
+
+<!-- Live view overlay -->
+<div class="overlay overlay-live" id="liveOverlay">
+  <div class="live-frame">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+      <button class="overlay-close" style="position:static;" id="closeLive">&#10005;</button>
+    </div>
+    <div class="live-video">
+      &#128249;
+      <div class="live-hud"><span>Battery 82%</span><span>Mic on</span><span>Speaker on</span></div>
+    </div>
+    <div class="live-controls">
+      <div class="live-control" id="liveSpeakControl">
+        <div class="live-control-icon">&#127908;</div><span>Speak</span>
+      </div>
+      <div class="live-control" id="liveVolumeControl">
+        <div class="live-control-icon">&#128266;</div><span>Volume</span>
+      </div>
+      <div class="live-control" id="liveStopControl">
+        <div class="live-control-icon">&#9632;</div><span>Stop</span>
+      </div>
+    </div>
+    <p id="liveStatusText" style="text-align:center;font-size:12px;color:#94A3B8;margin-top:14px;min-height:16px;"></p>
+    <audio id="liveRecordingPlayback" controls style="display:none;width:100%;margin-top:10px;"></audio>
+  </div>
+</div>
+
 <script>
-const TWIN_URL = "http://localhost:5001/digital_twin";
-const LOGS_URL = "http://localhost:5001/logs";
+  const DASHBOARD_API = "http://localhost:5001";
 
-function describeState(mode, accessibilityMode, hazardType, gesture) {
-  if (mode === "SAFETY_ALERT") {
-    return {
-      eyebrow: "Needs attention",
-      headline: "We noticed a sharp movement and haven't heard back.",
-      sub: "The robot has paused and is waiting for a response."
-    };
+  // --- Navigation ---
+  document.querySelectorAll("[data-screen]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const target = btn.getAttribute("data-screen");
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      document.getElementById("screen-" + target).classList.add("active");
+      document.querySelectorAll(".sidebar .nav-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll('.sidebar .nav-btn[data-screen="' + target + '"]').forEach(b => b.classList.add("active"));
+    });
+  });
+
+  // --- Waveform (decorative) ---
+  const waveform = document.getElementById("waveform");
+  for (let i = 0; i < 28; i++) {
+    const bar = document.createElement("div");
+    bar.className = "wave-bar";
+    bar.style.height = (8 + Math.abs(Math.sin(i * 0.9)) * 28) + "px";
+    waveform.appendChild(bar);
   }
-  if (mode === "ACCESSIBILITY" && accessibilityMode === "VISION_IMPAIRED") {
-    return {
-      eyebrow: "Moving carefully",
-      headline: `Navigating slowly around ${hazardType || "something"} in the path.`,
-      sub: "Speed reduced automatically for safety."
-    };
+
+  // --- Demo activity fallback ---
+  const demoActivity = [
+    { time: "10:30 AM", label: "Walk completed" },
+    { time: "1:00 PM", label: "Medicine taken" },
+    { time: "3:20 PM", label: "Interaction recorded" }
+  ];
+  function renderActivity(containerId, items) {
+    const el = document.getElementById(containerId);
+    el.innerHTML = items.map(a =>
+      `<div class="timeline-row"><span class="timeline-time">${a.time}</span><span class="timeline-label">${a.label}</span></div>`
+    ).join("");
   }
-  if (mode === "ACCESSIBILITY" && accessibilityMode === "HEARING_IMPAIRED") {
-    return {
-      eyebrow: "Visual mode",
-      headline: "Switched to large text — a sign or gesture was used.",
-      sub: "Communicating visually instead of by voice."
-    };
-  }
-  return {
-    eyebrow: "All calm",
-    headline: "Everything looks good right now.",
-    sub: "Just keeping company, as usual."
-  };
-}
+  renderActivity("activityLog", demoActivity);
+  renderActivity("safetyTimeline", [{ time: "8:05 AM", label: "Safety check passed" }, ...demoActivity]);
 
-function formatTime(unixSeconds) {
-  const d = new Date(unixSeconds * 1000);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}
+  // --- Overlays ---
+  const emergencyOverlay = document.getElementById("emergencyOverlay");
+  const liveOverlay = document.getElementById("liveOverlay");
+  document.getElementById("simulateEmergencyBtn").addEventListener("click", () => {
+    document.getElementById("emergencyTime").textContent =
+      new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    emergencyOverlay.classList.add("show");
+  });
+  document.getElementById("closeEmergency").addEventListener("click", () => emergencyOverlay.classList.remove("show"));
+  document.getElementById("liveViewBtn").addEventListener("click", () => liveOverlay.classList.add("show"));
+  document.getElementById("closeLive").addEventListener("click", () => { closeLiveView(); });
 
-function describeLogEntry(entry) {
-  if (entry.robot_state === "SAFETY_ALERT") {
-    return { text: "Sharp movement detected — checking in", badge: "alert" };
-  }
-  if (entry.hazard_in_path) {
-    return { text: `Noticed ${entry.hazard_type || "an obstacle"} nearby, moving carefully`, badge: "accessibility" };
-  }
-  if (entry.detected_gesture === "Wave") {
-    return { text: "Sign/gesture used — switched to visual display", badge: "accessibility" };
-  }
-  if (entry.detected_gesture === "Thumbs_Up") {
-    return { text: "Thumbs up — confirmed all is well", badge: "calm" };
-  }
-  return { text: "Quiet moment, nothing unusual", badge: "calm" };
-}
+  // --- Live View controls: Speak / Volume / Stop ---
+  let micStream = null;
+  let micActive = false;
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  const speakControl = document.getElementById("liveSpeakControl");
+  const volumeControl = document.getElementById("liveVolumeControl");
+  const stopControl = document.getElementById("liveStopControl");
+  const liveStatusText = document.getElementById("liveStatusText");
+  const playback = document.getElementById("liveRecordingPlayback");
 
-async function refresh() {
-  try {
-    const twinRes = await fetch(TWIN_URL);
-    const twin = await twinRes.json();
+  const VOLUME_LEVELS = [
+    { icon: "&#128266;", label: "Volume: High" },
+    { icon: "&#128265;", label: "Volume: Low" },
+    { icon: "&#128263;", label: "Volume: Muted" },
+  ];
+  let volumeIndex = 0;
 
-    const mode = twin.current_mode;
-    const isAlert = mode === "SAFETY_ALERT";
-    document.body.classList.toggle("alert-active", isAlert);
+  speakControl.addEventListener("click", async () => {
+    if (!micActive) {
+      try {
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        micActive = true;
+        speakControl.querySelector(".live-control-icon").style.background = "var(--danger)";
+        liveStatusText.textContent = "Recording... click Speak again to stop.";
+        playback.style.display = "none";
 
-    const raw = twin.raw_telemetry || {};
-    const desc = describeState(mode, twin.accessibility_mode, raw.hazard_type, raw.detected_gesture);
-
-    document.getElementById("eyebrow").textContent = desc.eyebrow;
-    document.getElementById("headline").textContent = desc.headline;
-    document.getElementById("subHeadline").innerHTML =
-      `Last update <span class="mono">${formatTime(twin.last_updated)}</span> — ${desc.sub}`;
-    document.getElementById("modeValue").textContent = mode || "—";
-    document.getElementById("batteryValue").textContent = (twin.battery_level ?? "—") + "%";
-
-    const logsRes = await fetch(LOGS_URL);
-    const logs = await logsRes.json();
-    const logList = document.getElementById("logList");
-
-    if (!logs.length) {
-      logList.innerHTML = '<div class="empty-state">Waiting for the first update…</div>';
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(micStream);
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) recordedChunks.push(e.data);
+        };
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: "audio/webm" });
+          playback.src = URL.createObjectURL(blob);
+          playback.style.display = "block";
+        };
+        mediaRecorder.start();
+      } catch (e) {
+        liveStatusText.textContent = "Microphone access was blocked or unavailable.";
+      }
     } else {
-      logList.innerHTML = logs.map(entry => {
-        const d = describeLogEntry(entry);
-        return `<div class="log-entry">
-          <div class="log-time">${formatTime(entry.timestamp)}</div>
-          <div class="log-text">${d.text}<span class="log-badge ${d.badge}">${entry.robot_state}</span></div>
-        </div>`;
-      }).join("");
+      if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+      if (micStream) micStream.getTracks().forEach(t => t.stop());
+      micActive = false;
+      speakControl.querySelector(".live-control-icon").style.background = "rgba(255,255,255,0.1)";
+      liveStatusText.textContent = "Recording stopped — play it back below.";
     }
-  } catch (e) {
-    document.getElementById("subHeadline").innerHTML =
-      `<span style="color:var(--alert)">Can't reach Module 4 — is it running?</span>`;
-  }
-}
+  });
 
-refresh();
-setInterval(refresh, 2000);
-</script>
-</body>
+  volumeControl.addEventListener("click", () => {
+    volumeIndex = (volumeIndex + 1) % VOLUME_LEVELS.length;
+    const level = VOLUME_LEVELS[volumeIndex];
+    volumeControl.querySelector(".live-control-icon").innerHTML = level.icon;
+    liveStatusText.textContent = level.label;
+  });
+
+  function closeLiveView() {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+    if (micStream) micStream.getTracks().forEach(t => t.stop());
+    micActive = false;
+    speakControl.querySelector(".live-control-icon").style.background = "rgba(255,255,255,0.1)";
+    liveStatusText.textContent = "";
+    playback.style.display = "none";
+    liveOverlay.classList.remove("show");
+  }
+  stopControl.addEventListener("click", closeLiveView);
+
+  // --- Live data polling from run_all.py's Flask server ---
+  function applyLiveState(state) {
+    const isAlert = state === "SAFETY_ALERT";
+    const pill = document.getElementById("statusPill");
+    pill.className = "status-pill " + (isAlert ? "alert" : "safe");
+    pill.innerHTML = `<span class="status-dot ${isAlert ? "alert" : "safe"}"></span>${isAlert ? "Emergency" : "Safe & active"}`;
+    if (isAlert) {
+      document.getElementById("emergencyTime").textContent =
+        new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      emergencyOverlay.classList.add("show");
+    }
+  }
+
+  async function pollDigitalTwin() {
+    try {
+      const res = await fetch(DASHBOARD_API + "/digital_twin");
+      if (!res.ok) throw new Error("not ready");
+      const data = await res.json();
+      document.getElementById("connStatus").textContent = "(live)";
+      if (data.robot_state) applyLiveState(data.robot_state);
+      if (typeof data.fall_suspected === "boolean") {
+        document.getElementById("safetyFall").textContent = data.fall_suspected ? "Fall suspected" : "No falls";
+      }
+      if (data.hazard_in_path !== undefined) {
+        document.getElementById("safetyHazard").textContent = data.hazard_in_path ? (data.hazard_type || "1") : "0";
+      }
+    } catch (e) {
+      document.getElementById("connStatus").textContent = "(demo data)";
+    }
+  }
+
+  async function pollLogs() {
+    try {
+      const res = await fetch(DASHBOARD_API + "/logs");
+      if (!res.ok) return;
+      const rows = await res.json();
+      if (!rows.length) return;
+      const items = rows.slice(0, 5).map(r => {
+        let label;
+        if (r.fall_suspected) {
+          label = "Fall suspected";
+        } else if (r.detected_gesture) {
+          label = `Gesture: ${r.detected_gesture}`;
+        } else if (r.hazard_in_path) {
+          label = `Hazard nearby: ${r.hazard_type || "object"}`;
+        } else if (r.pain_index >= 6) {
+          label = `Pain index elevated (${r.pain_index}/10)`;
+        } else {
+          label = `Normal reading (pain index ${r.pain_index}/10)`;
+        }
+        return {
+          time: new Date(r.timestamp * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+          label,
+        };
+      });
+      renderActivity("activityLog", items);
+      renderActivity("safetyTimeline", items);
+    } catch (e) { /* backend not running yet — keep demo data */ }
+  }
+
+  pollDigitalTwin();
+  pollLogs();
+  setInterval(pollDigitalTwin, 5000);
+  setInterval(pollLogs, 15000);
+
+  // --- Memory Engine (live) ---
+  async function pollMemory() {
+    try {
+      const res = await fetch(DASHBOARD_API + "/memory");
+      if (!res.ok) return;
+      const data = await res.json();
+
+      const prefsEl = document.getElementById("preferencesTags");
+      if (data.preferences && data.preferences.length) {
+        prefsEl.innerHTML = data.preferences.map(p =>
+          `<span class="tag">${p.value}</span>`
+        ).join("");
+      }
+
+      const familyEl = document.getElementById("familyDirectory");
+      if (data.family_members && data.family_members.length) {
+        familyEl.innerHTML = data.family_members.map(f => `
+          <div class="family-chip">
+            <div class="family-avatar">${(f.name || "?")[0].toUpperCase()}</div>
+            <div><p class="family-name">${f.name}</p><p class="family-relation">${f.relation || ""}</p></div>
+          </div>`).join("");
+      }
+
+      const remindersEl = document.getElementById("remindersList");
+      const reminderItems = [];
+      (data.medications || []).forEach(m => reminderItems.push(`${m.name} at ${m.times}`));
+      (data.important_dates || []).forEach(d => reminderItems.push(`${d.description} — ${d.date}`));
+      if (reminderItems.length) {
+        remindersEl.innerHTML = reminderItems.map(r =>
+          `<div class="reminder-row"><div class="reminder-dot"></div><span>${r}</span></div>`
+        ).join("");
+      }
+    } catch (e) { /* backend not running yet — keep demo data */ }
+  }
+
+  // --- Wellness Engine (live) ---
+  async function pollWellness() {
+    try {
+      const res = await fetch(DASHBOARD_API + "/wellness");
+      if (!res.ok) return;
+      const data = await res.json();
+      const note = document.getElementById("wellnessAnomalyNote");
+      if (data.wellness_score === null || data.wellness_score === undefined) {
+        note.style.display = "block";
+        note.textContent = "Not enough activity history yet to compute a wellness score.";
+      } else {
+        document.getElementById("wellnessScoreText").textContent = data.wellness_score + "%";
+        if (data.anomaly_flagged) {
+          note.style.display = "block";
+          note.textContent = "Today's activity is well below the learned baseline — worth checking in.";
+        } else {
+          note.style.display = "none";
+        }
+      }
+    } catch (e) { /* backend not running yet — keep demo data */ }
+  }
+
+  // --- Accessibility Profile (live, editable) ---
+  let a11yLive = false;
+  async function pollAccessibility() {
+    try {
+      const res = await fetch(DASHBOARD_API + "/accessibility");
+      if (!res.ok) return;
+      const data = await res.json();
+      a11yLive = true;
+      document.getElementById("a11yConnNote").style.display = "none";
+      document.querySelectorAll(".a11y-toggle-wrap").forEach(wrap => {
+        const need = wrap.getAttribute("data-need");
+        const on = !!data[need];
+        applyToggleVisual(wrap, on);
+      });
+    } catch (e) {
+      a11yLive = false;
+    }
+  }
+
+  function applyToggleVisual(wrap, on) {
+    const sw = wrap.querySelector(".a11y-switch");
+    const knob = wrap.querySelector(".a11y-knob");
+    const status = wrap.querySelector(".a11y-status");
+    sw.style.background = on ? "var(--success)" : "#E2E8F0";
+    knob.style.left = on ? "21px" : "3px";
+    status.style.color = on ? "var(--success)" : "var(--text-muted)";
+    status.textContent = on ? "On" : "Off";
+  }
+
+  document.querySelectorAll(".a11y-toggle-wrap").forEach(wrap => {
+    // Initialize with sensible demo defaults until live data arrives
+    applyToggleVisual(wrap, wrap.getAttribute("data-need") === "vision_impaired");
+
+    wrap.querySelector(".a11y-switch").addEventListener("click", async () => {
+      const need = wrap.getAttribute("data-need");
+      const currentlyOn = wrap.querySelector(".a11y-status").textContent === "On";
+      const newState = !currentlyOn;
+      applyToggleVisual(wrap, newState); // optimistic UI update
+
+      if (!a11yLive) return; // no backend connected — visual only
+
+      try {
+        await fetch(DASHBOARD_API + "/accessibility", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ need, enabled: newState }),
+        });
+      } catch (e) {
+        applyToggleVisual(wrap, currentlyOn); // revert on failure
+      }
+    });
+  });
+
+  // --- Routine Engine (live) ---
+  async function pollRoutine() {
+    try {
+      const res = await fetch(DASHBOARD_API + "/routine");
+      if (!res.ok) return;
+      const data = await res.json();
+
+      document.getElementById("routineWake").textContent = data.today_wake_time || "No activity yet";
+      document.getElementById("routineSleep").textContent = data.today_sleep_time || "No activity yet";
+      document.getElementById("routineCount").textContent = data.today_interaction_count ?? "0";
+
+      const adherenceEl = document.getElementById("medicationAdherence");
+      if (data.medication_adherence_pct === null || data.medication_adherence_pct === undefined) {
+        adherenceEl.textContent = "No medications scheduled";
+        adherenceEl.style.color = "var(--text-muted)";
+      } else {
+        adherenceEl.textContent = data.medication_adherence_pct + "%";
+        adherenceEl.style.color = data.medication_adherence_pct >= 100 ? "var(--success)" : "var(--warning)";
+      }
+
+      // Build "Mark as taken" buttons from the real scheduled medication list
+      const btnContainer = document.getElementById("medicationButtons");
+      if (data.scheduled_medications && data.scheduled_medications.length) {
+        btnContainer.innerHTML = data.scheduled_medications.map(name =>
+          `<button class="btn-secondary med-taken-btn" data-med="${name}">${name}</button>`
+        ).join("");
+        document.querySelectorAll(".med-taken-btn").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            btn.textContent = "Saving...";
+            try {
+              await fetch(DASHBOARD_API + "/medication/taken", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ medication_name: btn.getAttribute("data-med") }),
+              });
+              btn.textContent = "✓ " + btn.getAttribute("data-med");
+              pollRoutine();
+            } catch (e) {
+              btn.textContent = btn.getAttribute("data-med");
+            }
+          });
+        });
+      } else {
+        btnContainer.innerHTML = `<span style="font-size:13px;color:var(--text-muted);">No medications in Memory yet.</span>`;
+      }
+    } catch (e) { /* backend not running yet */ }
+  }
+  pollRoutine();
+  setInterval(pollRoutine, 20000);
+
+  // --- Family Connect: real recording + simulated call states ---
+  const familyRecordBtn = document.getElementById("familyRecordBtn");
+  const familyPlayBtn = document.getElementById("familyPlayBtn");
+  const familyStatusText = document.getElementById("familyStatusText");
+  const familyPlayback = document.getElementById("familyPlayback");
+  let familyStream = null;
+  let familyRecorder = null;
+  let familyChunks = [];
+  let familyRecording = false;
+
+  familyRecordBtn.addEventListener("click", async () => {
+    if (!familyRecording) {
+      try {
+        familyStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        familyRecording = true;
+        familyRecordBtn.innerHTML = "&#9632; Stop recording";
+        familyStatusText.textContent = "Recording your message...";
+        familyPlayback.style.display = "none";
+
+        familyChunks = [];
+        familyRecorder = new MediaRecorder(familyStream);
+        familyRecorder.ondataavailable = (e) => { if (e.data.size > 0) familyChunks.push(e.data); };
+        familyRecorder.onstop = () => {
+          const blob = new Blob(familyChunks, { type: "audio/webm" });
+          familyPlayback.src = URL.createObjectURL(blob);
+          familyPlayback.style.display = "block";
+        };
+        familyRecorder.start();
+      } catch (e) {
+        familyStatusText.textContent = "Microphone access was blocked or unavailable.";
+      }
+    } else {
+      if (familyRecorder && familyRecorder.state !== "inactive") familyRecorder.stop();
+      if (familyStream) familyStream.getTracks().forEach(t => t.stop());
+      familyRecording = false;
+      familyRecordBtn.innerHTML = "&#127908; Record";
+      familyStatusText.textContent = "Message recorded — play it below, or send it to the robot.";
+    }
+  });
+
+  familyPlayBtn.addEventListener("click", () => {
+    if (familyPlayback.src) {
+      familyPlayback.style.display = "block";
+      familyPlayback.play();
+      familyStatusText.textContent = "Playing your message (robot audio pipeline not yet connected).";
+    } else {
+      familyStatusText.textContent = "Record a message first.";
+    }
+  });
+
+  // Video/Phone call: honest simulated states (no real telephony backend yet)
+  const familyCallStatus = document.getElementById("familyCallStatus");
+  function simulateCall(kind) {
+    familyCallStatus.textContent = `Calling Neha via ${kind}...`;
+    setTimeout(() => {
+      familyCallStatus.textContent = `${kind} would connect here once real calling is set up (currently simulated).`;
+    }, 1800);
+  }
+  document.getElementById("familyVideoBtn").addEventListener("click", () => simulateCall("video call"));
+  document.getElementById("familyPhoneBtn").addEventListener("click", () => simulateCall("phone call"));
+
+  pollMemory();
+  pollWellness();
+  pollAccessibility();
+  setInterval(pollMemory, 20000);
+  setInterval(pollWellness, 20000);
+  setInterval(pollAccessibility, 20000);
+</script></body>
 </html>

@@ -8,6 +8,11 @@ multiple terminals. Module 5 (the dashboard) is still a separate
 browser tab, since in the real system that's a genuinely different
 device (a family member's phone/laptop).
 
+UPDATED: now uses Module 2's DecisionManager (orchestrates Safety +
+Accessibility + Memory + Wellness + Companion engines) instead of
+ModeManager alone, and exposes /memory, /wellness, and /accessibility
+endpoints so the dashboard can show real data instead of demo values.
+
 Place this file at the TOP LEVEL of your Raksha_AI folder, alongside
 Module_1, Module_2, Module_3, Module_4 (NOT inside any of them).
 
@@ -19,7 +24,7 @@ import sys
 import os
 import time
 import threading
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 
 # Make all 4 module folders importable
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -33,7 +38,7 @@ from face_detector import FaceDetector       # noqa: E402
 from hazard_detector import HazardDetector   # noqa: E402
 from json_output import build_output         # noqa: E402
 
-from mode_manager import ModeManager         # noqa: E402  (Module 2)
+from decision_manager import DecisionManager, DecisionPriority   # noqa: E402  (Module 2)
 
 from hardware_bridge import HardwareBridge   # noqa: E402  (Module 3)
 
@@ -46,14 +51,16 @@ DASHBOARD_PORT = 5001
 DEMO_LEFT_PWM = 60
 DEMO_RIGHT_PWM = 60
 
-# Performance tuning for slower hardware (e.g. Raspberry Pi):
-# YOLO hazard detection is the most expensive step -- only run it
-# every Nth frame and reuse the last result in between. Hazards on
-# the floor don't change fast enough to need checking every frame.
 HAZARD_CHECK_EVERY_N_FRAMES = 3
+
+# How often to run the Wellness Engine's daily anomaly check, in seconds.
+# 60 for demo purposes so you can actually see it update; in production
+# this would run once a day, not every minute.
+WELLNESS_CHECK_INTERVAL_SECONDS = 60
 
 app = Flask(__name__)
 backend = CloudBackend(caregiver_phone="+15551234567", robot_name="Raksha AI Robot")
+manager = None  # set in main(), a DecisionManager instance
 latest_status = {}
 
 
@@ -93,12 +100,109 @@ def get_logs():
     return jsonify(logs)
 
 
+# ---- NEW: Memory Engine endpoints ----
+
+@app.route("/memory", methods=["GET"])
+def get_memory():
+    """Everything the Memory & Companion dashboard card needs."""
+    if manager is None:
+        return jsonify({"error": "System not started yet"}), 503
+    return jsonify({
+        "family_members": manager.memory.get_family_members(),
+        "medications": manager.memory.get_medications(),
+        "important_dates": manager.memory.get_important_dates(),
+        "preferences": manager.memory.get_all_preferences(),
+        "context_summary": manager.memory.get_context_summary(),
+    })
+
+
+# ---- NEW: Wellness Engine endpoint ----
+
+@app.route("/wellness", methods=["GET"])
+def get_wellness():
+    """Everything the Wellness & Analytics dashboard screen needs."""
+    if manager is None:
+        return jsonify({"error": "System not started yet"}), 503
+    score = manager.wellness.get_wellness_score()
+    return jsonify({
+        "wellness_score": score,               # None until enough history exists
+        "today_active_seconds": manager.wellness._today_active_seconds,
+        "anomaly_flagged": manager.last_wellness_flag,
+    })
+
+
+# ---- NEW: Routine Engine endpoint ----
+
+@app.route("/routine", methods=["GET"])
+def get_routine():
+    """Wake/sleep time proxy, interaction count, and medication adherence."""
+    if manager is None:
+        return jsonify({"error": "System not started yet"}), 503
+    routine = manager.wellness.get_routine_summary()
+    med_names = [m["name"] for m in manager.memory.get_medications()]
+    adherence = manager.wellness.get_medication_adherence_today(med_names)
+    routine["medication_adherence_pct"] = adherence
+    routine["scheduled_medications"] = med_names
+    return jsonify(routine)
+
+
+@app.route("/medication/taken", methods=["POST"])
+def mark_medication_taken():
+    """
+    Lets the caregiver dashboard mark a dose as taken.
+    Expects JSON body: {"medication_name": "Metformin"}
+    """
+    if manager is None:
+        return jsonify({"error": "System not started yet"}), 503
+    body = request.get_json(force=True, silent=True) or {}
+    name = body.get("medication_name")
+    if not name:
+        return jsonify({"error": "Expected {'medication_name': <string>}"}), 400
+    manager.wellness.record_medication_taken(name)
+    return jsonify({"success": True, "medication_name": name})
+
+
+# ---- NEW: Accessibility Profile endpoints (GET current, POST to update) ----
+
+@app.route("/accessibility", methods=["GET"])
+def get_accessibility():
+    """Everything the Accessibility Profile dashboard screen needs."""
+    if manager is None:
+        return jsonify({"error": "System not started yet"}), 503
+    profile = manager.accessibility_profile
+    return jsonify({
+        "hearing_impaired": profile.get_need("hearing_impaired"),
+        "vision_impaired": profile.get_need("vision_impaired"),
+        "dyslexia": profile.get_need("dyslexia"),
+        "mobility_challenge": profile.get_need("mobility_challenge"),
+        "adapted_settings": manager.get_accessibility_settings(),
+    })
+
+
+@app.route("/accessibility", methods=["POST"])
+def set_accessibility():
+    """
+    Lets the caregiver dashboard toggle a need on/off.
+    Expects JSON body: {"need": "hearing_impaired", "enabled": true}
+    """
+    if manager is None:
+        return jsonify({"error": "System not started yet"}), 503
+    body = request.get_json(force=True, silent=True) or {}
+    need = body.get("need")
+    enabled = body.get("enabled")
+    valid_needs = {"hearing_impaired", "vision_impaired", "dyslexia", "mobility_challenge"}
+    if need not in valid_needs or not isinstance(enabled, bool):
+        return jsonify({"error": "Expected {'need': <one of %s>, 'enabled': true|false}" % valid_needs}), 400
+    manager.accessibility_profile.set_need(need, enabled)
+    return jsonify({"success": True, "need": need, "enabled": enabled})
+
+
 def run_dashboard_server():
     app.run(host="0.0.0.0", port=DASHBOARD_PORT, debug=False, use_reloader=False)
 
 
 def main():
-    global latest_status
+    global latest_status, manager
 
     print("=" * 60)
     print("RakshaSetu AI - Combined Demo Runner")
@@ -117,7 +221,7 @@ def main():
         if new_state == "SAFETY_ALERT":
             backend.dispatch_emergency_alert(reason="mode_manager_escalation")
 
-    manager = ModeManager(
+    manager = DecisionManager(
         on_state_change=on_state_change,
         on_verification_prompt=hw.speak,
     )
@@ -126,6 +230,7 @@ def main():
     server_thread.start()
 
     print(f"\nDashboard should point to: http://localhost:{DASHBOARD_PORT}/digital_twin")
+    print("New endpoints available: /memory  /wellness  /accessibility")
     print("Open Module_5/dashboard.html in your browser now.\n")
     print("Starting camera loop... (Ctrl+C to stop)\n")
 
@@ -136,6 +241,7 @@ def main():
     cached_hazard_type = None
     fps_counter = 0
     fps_timer_start = time.time()
+    last_wellness_check = time.time()
 
     try:
         while True:
@@ -147,8 +253,6 @@ def main():
             gesture = hand_detector.process(frame)
             pain_index = face_detector.process(frame)
 
-            # Only run the expensive YOLO hazard check every Nth frame;
-            # reuse the last result on skipped frames.
             if frame_count % HAZARD_CHECK_EVERY_N_FRAMES == 0:
                 cached_hazard_in_path, cached_hazard_type = hazard_detector.process(frame)
             hazard_in_path = cached_hazard_in_path
@@ -163,32 +267,46 @@ def main():
             )
             latest_status = output
 
+            # DecisionManager routes through Safety Engine internally AND
+            # feeds the Wellness Engine's movement tracker.
             manager.process_telemetry(output)
+            current_state = manager.safety.current_state
+            current_accessibility_mode = manager.safety.accessibility_mode
 
-            backend.log_telemetry(output, robot_state=manager.current_state)
+            # NEW: Routine Engine -- count a real interaction whenever a
+            # gesture is detected, or a hazard/pain reading suggests a
+            # person is actually present and active (not just an empty room).
+            if output.get("detected_gesture") or output.get("pain_index", 0) > 0:
+                manager.wellness.record_interaction(output.get("timestamp"))
+
+            backend.log_telemetry(output, robot_state=current_state)
             backend.sync_digital_twin(
-                output, robot_state=manager.current_state,
-                accessibility_mode=manager.accessibility_mode
+                output, robot_state=current_state,
+                accessibility_mode=current_accessibility_mode
             )
 
-            if (manager.current_state != last_state or
-                    manager.accessibility_mode != last_accessibility_mode):
+            if (current_state != last_state or
+                    current_accessibility_mode != last_accessibility_mode):
                 hw.enforce_hardware_profile(
-                    manager.current_state,
-                    accessibility_mode=manager.accessibility_mode,
+                    current_state,
+                    accessibility_mode=current_accessibility_mode,
                     raw_left_pwm=DEMO_LEFT_PWM,
                     raw_right_pwm=DEMO_RIGHT_PWM,
                 )
-                last_state = manager.current_state
-                last_accessibility_mode = manager.accessibility_mode
+                last_state = current_state
+                last_accessibility_mode = current_accessibility_mode
+
+            # Periodic Wellness Engine check (demo interval; see constant above)
+            if time.time() - last_wellness_check >= WELLNESS_CHECK_INTERVAL_SECONDS:
+                is_anomaly, today, baseline = manager.check_wellness()
+                print(f"[Wellness] today={today}s baseline={baseline} anomaly={is_anomaly}")
+                last_wellness_check = time.time()
 
             elapsed = time.time() - loop_start
             sleep_time = FRAME_INTERVAL - elapsed
             if sleep_time > 0:
                 time.sleep(sleep_time)
 
-            # Measure and print the REAL achieved FPS every 3 seconds,
-            # so you can verify whether tuning changes actually helped.
             fps_counter += 1
             if time.time() - fps_timer_start >= 3.0:
                 actual_fps = fps_counter / (time.time() - fps_timer_start)
