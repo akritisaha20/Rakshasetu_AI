@@ -1,10 +1,17 @@
 """
 main.py
-Module 3: Combined runner.
+Module 3: Standalone runner (camera + decisions + hardware only,
+no cloud logging -- use run_all.py for the full combined system).
 
 Connects the full pipeline together:
-  Module 1 (camera, over HTTP) -> Module 2 (ModeManager decisions)
+  Module 1 (camera, over HTTP) -> Module 2 (DecisionManager, all 5 engines)
   -> Module 3 (HardwareBridge actions)
+
+FIXED: previously imported the old plain ModeManager directly, which
+was inconsistent with run_all.py (which uses the full DecisionManager
+with all 5 engines). Now both use the same DecisionManager, so
+behavior is consistent whether you run Module 3 standalone or as part
+of the combined run_all.py.
 
 Requires Module 1's main.py to already be running (so
 http://localhost:5000/status is live) before you start this script.
@@ -15,10 +22,10 @@ import os
 import time
 import requests
 
-# Import Module 2's ModeManager from the sibling Module_2 folder
+# Import Module 2's DecisionManager from the sibling Module_2 folder
 MODULE_2_PATH = os.path.join(os.path.dirname(__file__), "..", "Module_2")
 sys.path.insert(0, MODULE_2_PATH)
-from mode_manager import ModeManager  # noqa: E402
+from decision_manager import DecisionManager  # noqa: E402
 
 from hardware_bridge import HardwareBridge
 
@@ -33,10 +40,16 @@ DEMO_RIGHT_PWM = 60
 
 def main():
     hw = HardwareBridge()
-    manager = ModeManager(on_verification_prompt=hw.speak)
+    manager = DecisionManager(on_verification_prompt=hw.speak)
+
+    # Demo seed data so Memory/Companion features have something to
+    # show immediately when testing Module 3 standalone.
+    manager.memory.set_user_name("Aditi")
+    if not manager.memory.get_family_members():
+        manager.memory.remember_family_member("Neha", "daughter", "every Sunday")
 
     print(f"Module 3 started. Polling Module 1 at {MODULE_1_URL} ...")
-    print(f"Current state: {manager.current_state}\n")
+    print(f"Current state: {manager.safety.current_state}\n")
 
     last_state = None
     last_accessibility_mode = None
@@ -57,16 +70,16 @@ def main():
 
         # Only push a hardware update when something actually changed,
         # to avoid spamming identical commands 15 times a second.
-        if (manager.current_state != last_state or
-                manager.accessibility_mode != last_accessibility_mode):
+        if (manager.safety.current_state != last_state or
+                manager.safety.accessibility_mode != last_accessibility_mode):
             hw.enforce_hardware_profile(
-                manager.current_state,
-                accessibility_mode=manager.accessibility_mode,
+                manager.safety.current_state,
+                accessibility_mode=manager.safety.accessibility_mode,
                 raw_left_pwm=DEMO_LEFT_PWM,
                 raw_right_pwm=DEMO_RIGHT_PWM,
             )
-            last_state = manager.current_state
-            last_accessibility_mode = manager.accessibility_mode
+            last_state = manager.safety.current_state
+            last_accessibility_mode = manager.safety.accessibility_mode
 
         time.sleep(POLL_INTERVAL)
 
