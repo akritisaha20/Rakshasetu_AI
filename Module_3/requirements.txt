@@ -1,3 +1,12 @@
 requests
 pyserial
 pyttsx3
+
+# --- HC-SR04 + OLED (Raspberry Pi only) ---
+# These will fail to import on Windows/laptop dev -- that's expected and
+# handled gracefully by hardware_bridge.py (falls back to simulation).
+# Only install these ON the Raspberry Pi itself, once HC-SR04/OLED are wired up.
+# RPi.GPIO
+# adafruit-blinka
+# adafruit-circuitpython-ssd1306
+# Pillow

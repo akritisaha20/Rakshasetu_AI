@@ -33,5 +33,24 @@ print("(You should have HEARD this spoken through your speakers)")
 print("\n=== SCENARIO E: Back to normal after alert clears ===")
 hw.enforce_hardware_profile("CONVERSATION", raw_left_pwm=50, raw_right_pwm=50)
 
+print("\n=== SCENARIO F: HC-SR04 distance read (scaffold, no sensor connected yet) ===")
+distance = hw.read_distance_cm()
+print(f"(Returned: {distance} -- expected None until the real sensor is wired up)")
+
+print("\n=== SCENARIO G: Obstacle avoidance -- simulating a close obstacle (10cm) ===")
+hw.read_distance_cm = lambda: 10  # fake a near obstacle for this test only
+hw.enforce_hardware_profile("CONVERSATION", raw_left_pwm=80, raw_right_pwm=80)
+print("(Notice: forward motor command should be blocked -- 0,0 instead of 80,80)")
+
+print("\n=== SCENARIO H: Obstacle avoidance -- caution zone (30cm) ===")
+hw.read_distance_cm = lambda: 30  # fake a mid-range obstacle
+hw.enforce_hardware_profile("CONVERSATION", raw_left_pwm=80, raw_right_pwm=80)
+print("(Notice: forward motor command should be halved -- 40,40 instead of 80,80)")
+
+print("\n=== SCENARIO I: Obstacle avoidance -- clear path (100cm), back to normal ===")
+hw.read_distance_cm = lambda: None  # back to simulation/no-sensor behavior
+hw.enforce_hardware_profile("CONVERSATION", raw_left_pwm=80, raw_right_pwm=80)
+print("(Notice: no obstacle data -- full speed passes through unchanged)")
+
 print("\nAll scenarios complete. Review the printed hardware commands above.")
 hw.close()

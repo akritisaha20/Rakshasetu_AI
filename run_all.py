@@ -31,7 +31,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 for module_folder in ["Module_1", "Module_2", "Module_3", "Module_4"]:
     sys.path.insert(0, os.path.join(BASE_DIR, module_folder))
 
-from camera_dev import RakshaCamera          # noqa: E402  (Module 1 - laptop webcam)
+from camera import RakshaCamera              # noqa: E402  (Module 1 - auto-detects Pi camera vs. laptop webcam)
 from pose_detector import PoseDetector       # noqa: E402
 from hand_detector import HandDetector       # noqa: E402
 from face_detector import FaceDetector       # noqa: E402

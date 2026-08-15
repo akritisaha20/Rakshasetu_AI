@@ -16,7 +16,7 @@ import threading
 
 from flask import Flask, jsonify
 
-from camera_dev import RakshaCamera
+from camera import RakshaCamera  # auto-detects Pi camera vs. laptop webcam
 from pose_detector import PoseDetector
 from hand_detector import HandDetector
 from face_detector import FaceDetector

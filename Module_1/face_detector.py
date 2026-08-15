@@ -98,7 +98,7 @@ class FaceDetector:
 
 if __name__ == "__main__":
     import cv2
-    from camera_dev import RakshaCamera  # laptop webcam; swap to `camera` on the Pi
+    from camera import RakshaCamera  # auto-detects Pi camera vs. laptop webcam
 
     cam = RakshaCamera().start()
     detector = FaceDetector()
