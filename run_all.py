@@ -197,6 +197,27 @@ def set_accessibility():
     return jsonify({"success": True, "need": need, "enabled": enabled})
 
 
+@app.route("/report/<period>", methods=["GET"])
+def get_report(period):
+    """
+    Weekly/monthly/daily caregiver summary. Combines Module 4's real
+    telemetry report (falls, hazards, pain index, safety alerts) from
+    raksha_local_logs.db with Module 2's real medication adherence data
+    from wellness.db, since this endpoint has access to both.
+    period: "daily", "weekly", or "monthly"
+    """
+    if manager is None:
+        return jsonify({"error": "System not started yet"}), 503
+    try:
+        report = backend.generate_report(period)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    med_names = [m["name"] for m in manager.memory.get_medications()]
+    report["medication_adherence_today"] = manager.wellness.get_medication_adherence_today(med_names)
+    return jsonify(report)
+
+
 def run_dashboard_server():
     app.run(host="0.0.0.0", port=DASHBOARD_PORT, debug=False, use_reloader=False)
 

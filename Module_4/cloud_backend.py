@@ -158,3 +158,81 @@ class CloudBackend:
         rows = cur.fetchall()
         conn.close()
         return rows
+
+    def generate_report(self, period="weekly"):
+        """
+        Builds a caregiver summary report from REAL logged telemetry data
+        in raksha_local_logs.db.
+
+        period: "daily", "weekly", or "monthly" -- controls the lookback
+        window (1 / 7 / 30 days from now).
+
+        Returns a dict with:
+          - period, window_start, window_end (unix timestamps)
+          - total_entries logged in the window
+          - fall_count, fall_timestamps
+          - hazard_count, hazard_types (breakdown)
+          - avg_pain_index, max_pain_index (None if no pain data logged)
+          - safety_alert_count (how many entries had robot_state ==
+            SAFETY_ALERT)
+
+        NOTE: medication adherence is NOT included here, since that data
+        lives in Module 2's WellnessEngine (wellness.db), not in this
+        module's telemetry_log. run_all.py's /report/<period> endpoint
+        merges this report with wellness data before returning it to the
+        dashboard, since it already has access to both.
+        """
+        period_days = {"daily": 1, "weekly": 7, "monthly": 30}
+        days = period_days.get(period)
+        if days is None:
+            raise ValueError(
+                f"Unknown period '{period}'. Expected one of: "
+                f"{list(period_days.keys())}"
+            )
+
+        window_end = int(time.time())
+        window_start = window_end - (days * 86400)
+
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT timestamp, fall_suspected, pain_index, hazard_in_path,
+                   hazard_type, robot_state
+            FROM telemetry_log
+            WHERE timestamp >= ? AND timestamp <= ?
+            ORDER BY timestamp ASC
+        """, (window_start, window_end))
+        rows = cur.fetchall()
+        conn.close()
+
+        fall_timestamps = []
+        hazard_types = {}
+        pain_values = []
+        safety_alert_count = 0
+
+        for ts, fall_suspected, pain_index, hazard_in_path, hazard_type, robot_state in rows:
+            if fall_suspected:
+                fall_timestamps.append(ts)
+            if hazard_in_path and hazard_type:
+                hazard_types[hazard_type] = hazard_types.get(hazard_type, 0) + 1
+            if pain_index is not None:
+                pain_values.append(pain_index)
+            if robot_state == "SAFETY_ALERT":
+                safety_alert_count += 1
+
+        avg_pain_index = round(sum(pain_values) / len(pain_values), 1) if pain_values else None
+        max_pain_index = max(pain_values) if pain_values else None
+
+        return {
+            "period": period,
+            "window_start": window_start,
+            "window_end": window_end,
+            "total_entries": len(rows),
+            "fall_count": len(fall_timestamps),
+            "fall_timestamps": fall_timestamps,
+            "hazard_count": sum(hazard_types.values()),
+            "hazard_types": hazard_types,
+            "avg_pain_index": avg_pain_index,
+            "max_pain_index": max_pain_index,
+            "safety_alert_count": safety_alert_count,
+        }

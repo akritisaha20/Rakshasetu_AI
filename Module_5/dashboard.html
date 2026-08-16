@@ -219,8 +219,12 @@
   .live-frame { width: 100%; max-width: 380px; }
   .live-video {
     aspect-ratio: 4/3; border-radius: 12px; background: #1E293B; display: flex; align-items: center;
-    justify-content: center; position: relative; color: #475569; font-size: 40px;
+    justify-content: center; position: relative; color: #475569; font-size: 40px; overflow: hidden;
   }
+  .live-video video {
+    width: 100%; height: 100%; object-fit: cover; border-radius: 12px; display: none;
+  }
+  .live-video .live-placeholder-icon { display: flex; }
   .live-hud { position: absolute; top: 12px; left: 12px; font-size: 12px; color: #fff; display: flex; gap: 12px; }
   .live-controls { display: flex; justify-content: center; gap: 20px; margin-top: 20px; }
   .live-control { display: flex; flex-direction: column; align-items: center; gap: 6px; }
@@ -504,8 +508,9 @@
       <button class="overlay-close" style="position:static;" id="closeLive">&#10005;</button>
     </div>
     <div class="live-video">
-      &#128249;
-      <div class="live-hud"><span>Battery 82%</span><span>Mic on</span><span>Speaker on</span></div>
+      <video id="liveVideoFeed" autoplay playsinline muted></video>
+      <span class="live-placeholder-icon" id="livePlaceholderIcon">&#128249;</span>
+      <div class="live-hud"><span id="liveHudStatus">Connecting…</span><span>Mic on</span><span>Speaker on</span></div>
     </div>
     <div class="live-controls">
       <div class="live-control" id="liveSpeakControl">
@@ -570,8 +575,43 @@
     emergencyOverlay.classList.add("show");
   });
   document.getElementById("closeEmergency").addEventListener("click", () => emergencyOverlay.classList.remove("show"));
-  document.getElementById("liveViewBtn").addEventListener("click", () => liveOverlay.classList.add("show"));
+  document.getElementById("liveViewBtn").addEventListener("click", () => {
+    liveOverlay.classList.add("show");
+    startLiveVideoFeed();
+  });
   document.getElementById("closeLive").addEventListener("click", () => { closeLiveView(); });
+
+  // --- Live video feed: real webcam via getUserMedia ---
+  let liveVideoStream = null;
+  const liveVideoEl = document.getElementById("liveVideoFeed");
+  const livePlaceholderIcon = document.getElementById("livePlaceholderIcon");
+  const liveHudStatus = document.getElementById("liveHudStatus");
+
+  async function startLiveVideoFeed() {
+    liveHudStatus.textContent = "Connecting…";
+    try {
+      liveVideoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      liveVideoEl.srcObject = liveVideoStream;
+      liveVideoEl.style.display = "block";
+      livePlaceholderIcon.style.display = "none";
+      liveHudStatus.textContent = "Live";
+    } catch (e) {
+      // Camera unavailable or permission denied -- fall back to placeholder icon
+      liveVideoEl.style.display = "none";
+      livePlaceholderIcon.style.display = "flex";
+      liveHudStatus.textContent = "Camera unavailable";
+    }
+  }
+
+  function stopLiveVideoFeed() {
+    if (liveVideoStream) {
+      liveVideoStream.getTracks().forEach(t => t.stop());
+      liveVideoStream = null;
+    }
+    liveVideoEl.srcObject = null;
+    liveVideoEl.style.display = "none";
+    livePlaceholderIcon.style.display = "flex";
+  }
 
   // --- Live View controls: Speak / Volume / Stop ---
   let micStream = null;
@@ -637,6 +677,7 @@
     speakControl.querySelector(".live-control-icon").style.background = "rgba(255,255,255,0.1)";
     liveStatusText.textContent = "";
     playback.style.display = "none";
+    stopLiveVideoFeed();
     liveOverlay.classList.remove("show");
   }
   stopControl.addEventListener("click", closeLiveView);
