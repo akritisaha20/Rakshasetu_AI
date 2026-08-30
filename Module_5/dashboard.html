@@ -479,7 +479,41 @@
     <!-- MODULE PLACEHOLDERS -->
     <div class="screen" id="screen-m1"><h2 class="title">Module 1</h2><div class="card placeholder-card"><p>Your existing Module 1 content goes here.</p></div></div>
     <div class="screen" id="screen-m2"><h2 class="title">Module 2</h2><div class="card placeholder-card"><p>Your existing Module 2 content goes here.</p></div></div>
-    <div class="screen" id="screen-m3"><h2 class="title">Module 3</h2><div class="card placeholder-card"><p>Your existing Module 3 content goes here.</p></div></div>
+
+    <!-- MODULE 3 — replaced placeholder with a real flowchart -->
+    <div class="screen" id="screen-m3">
+      <h2 class="title">Module 3 — Hardware Bridge</h2>
+      <p class="subtitle">Turns Module 2's decisions into physical robot actions</p>
+      <div class="card" style="padding:24px;">
+        <svg width="100%" viewBox="0 0 680 380" style="max-width:640px;display:block;margin:0 auto;">
+          <defs>
+            <marker id="m3arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M2 1L8 5L2 9" fill="none" stroke="#64748B" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+          </defs>
+          <rect x="230" y="40" width="220" height="44" rx="8" fill="#EEF2F7" stroke="#1E3A8A" stroke-width="0.5"/>
+          <text x="340" y="66" text-anchor="middle" font-size="14" font-weight="500" fill="#1E3A8A">Decision layer (Module 2)</text>
+          <line x1="340" y1="84" x2="340" y2="128" stroke="#64748B" stroke-width="1.5" marker-end="url(#m3arrow)"/>
+          <rect x="210" y="130" width="260" height="56" rx="8" fill="#D1FAE5" stroke="#10B981" stroke-width="0.5"/>
+          <text x="340" y="154" text-anchor="middle" font-size="14" font-weight="500" fill="#065F46">Hardware bridge</text>
+          <text x="340" y="172" text-anchor="middle" font-size="12" fill="#065F46">Turns decisions into actions</text>
+          <line x1="280" y1="186" x2="150" y2="258" stroke="#64748B" stroke-width="1.5" marker-end="url(#m3arrow)"/>
+          <line x1="340" y1="186" x2="340" y2="258" stroke="#64748B" stroke-width="1.5" marker-end="url(#m3arrow)"/>
+          <line x1="400" y1="186" x2="530" y2="258" stroke="#64748B" stroke-width="1.5" marker-end="url(#m3arrow)"/>
+          <rect x="50" y="260" width="200" height="56" rx="8" fill="#FAECE7" stroke="#EF4444" stroke-width="0.5"/>
+          <text x="150" y="284" text-anchor="middle" font-size="14" font-weight="500" fill="#991B1B">Motor commands</text>
+          <text x="150" y="302" text-anchor="middle" font-size="12" fill="#991B1B">Speed varies by mode</text>
+          <rect x="240" y="260" width="200" height="56" rx="8" fill="#FAECE7" stroke="#EF4444" stroke-width="0.5"/>
+          <text x="340" y="284" text-anchor="middle" font-size="14" font-weight="500" fill="#991B1B">OLED display</text>
+          <text x="340" y="302" text-anchor="middle" font-size="12" fill="#991B1B">Shows face state</text>
+          <rect x="430" y="260" width="200" height="56" rx="8" fill="#FAECE7" stroke="#EF4444" stroke-width="0.5"/>
+          <text x="530" y="284" text-anchor="middle" font-size="14" font-weight="500" fill="#991B1B">Audio output</text>
+          <text x="530" y="302" text-anchor="middle" font-size="12" fill="#991B1B">Speech + siren</text>
+          <text x="340" y="345" text-anchor="middle" font-size="12" fill="#64748B">Motor speed: full in Conversation, slower in Accessibility, frozen in Safety Alert</text>
+        </svg>
+      </div>
+    </div>
+
     <div class="screen" id="screen-m4"><h2 class="title">Module 4</h2><div class="card placeholder-card"><p>Your existing Module 4 content goes here.</p></div></div>
     <div class="screen" id="screen-m5"><h2 class="title">Module 5</h2><div class="card placeholder-card"><p>Your existing Module 5 content goes here.</p></div></div>
 
@@ -529,8 +563,7 @@
 </div>
 
 <script>
-  
-  const DASHBOARD_API = "https://rakshasetu-ai.onrender.com";
+  const DASHBOARD_API = "http://localhost:5001";
 
   // --- Navigation ---
   document.querySelectorAll("[data-screen]").forEach(btn => {
@@ -597,7 +630,6 @@
       livePlaceholderIcon.style.display = "none";
       liveHudStatus.textContent = "Live";
     } catch (e) {
-      // Camera unavailable or permission denied -- fall back to placeholder icon
       liveVideoEl.style.display = "none";
       livePlaceholderIcon.style.display = "flex";
       liveHudStatus.textContent = "Camera unavailable";
@@ -740,7 +772,7 @@
       });
       renderActivity("activityLog", items);
       renderActivity("safetyTimeline", items);
-    } catch (e) { /* backend not running yet — keep demo data */ }
+    } catch (e) { }
   }
 
   pollDigitalTwin();
@@ -780,7 +812,7 @@
           `<div class="reminder-row"><div class="reminder-dot"></div><span>${r}</span></div>`
         ).join("");
       }
-    } catch (e) { /* backend not running yet — keep demo data */ }
+    } catch (e) { }
   }
 
   // --- Wellness Engine (live) ---
@@ -802,7 +834,7 @@
           note.style.display = "none";
         }
       }
-    } catch (e) { /* backend not running yet — keep demo data */ }
+    } catch (e) { }
   }
 
   // --- Accessibility Profile (live, editable) ---
@@ -835,16 +867,15 @@
   }
 
   document.querySelectorAll(".a11y-toggle-wrap").forEach(wrap => {
-    // Initialize with sensible demo defaults until live data arrives
     applyToggleVisual(wrap, wrap.getAttribute("data-need") === "vision_impaired");
 
     wrap.querySelector(".a11y-switch").addEventListener("click", async () => {
       const need = wrap.getAttribute("data-need");
       const currentlyOn = wrap.querySelector(".a11y-status").textContent === "On";
       const newState = !currentlyOn;
-      applyToggleVisual(wrap, newState); // optimistic UI update
+      applyToggleVisual(wrap, newState);
 
-      if (!a11yLive) return; // no backend connected — visual only
+      if (!a11yLive) return;
 
       try {
         await fetch(DASHBOARD_API + "/accessibility", {
@@ -853,7 +884,7 @@
           body: JSON.stringify({ need, enabled: newState }),
         });
       } catch (e) {
-        applyToggleVisual(wrap, currentlyOn); // revert on failure
+        applyToggleVisual(wrap, currentlyOn);
       }
     });
   });
@@ -878,7 +909,6 @@
         adherenceEl.style.color = data.medication_adherence_pct >= 100 ? "var(--success)" : "var(--warning)";
       }
 
-      // Build "Mark as taken" buttons from the real scheduled medication list
       const btnContainer = document.getElementById("medicationButtons");
       if (data.scheduled_medications && data.scheduled_medications.length) {
         btnContainer.innerHTML = data.scheduled_medications.map(name =>
@@ -903,7 +933,7 @@
       } else {
         btnContainer.innerHTML = `<span style="font-size:13px;color:var(--text-muted);">No medications in Memory yet.</span>`;
       }
-    } catch (e) { /* backend not running yet */ }
+    } catch (e) { }
   }
   pollRoutine();
   setInterval(pollRoutine, 20000);
@@ -958,7 +988,6 @@
     }
   });
 
-  // Video/Phone call: honest simulated states (no real telephony backend yet)
   const familyCallStatus = document.getElementById("familyCallStatus");
   function simulateCall(kind) {
     familyCallStatus.textContent = `Calling Neha via ${kind}...`;
