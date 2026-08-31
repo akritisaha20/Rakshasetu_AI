@@ -477,8 +477,60 @@
     </div>
 
     <!-- MODULE PLACEHOLDERS -->
-    <div class="screen" id="screen-m1"><h2 class="title">Module 1</h2><div class="card placeholder-card"><p>Your existing Module 1 content goes here.</p></div></div>
-    <div class="screen" id="screen-m2"><h2 class="title">Module 2</h2><div class="card placeholder-card"><p>Your existing Module 2 content goes here.</p></div></div>
+    <div class="screen" id="screen-m1">
+      <h2 class="title">Module 1 — Perception Layer</h2>
+      <p class="subtitle">Captures live camera video and runs 4 AI pipelines in real time</p>
+      <div class="card">
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-bottom:1px solid #F1F5F9;">
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(30,58,138,0.1);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">📷</div>
+          <div><p style="font-size:14px;font-weight:500;margin:0;">Camera capture</p><p style="font-size:12.5px;color:var(--text-muted);margin:2px 0 0;">Live video feed processed frame by frame</p></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-bottom:1px solid #F1F5F9;">
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(30,58,138,0.1);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">🧍</div>
+          <div><p style="font-size:14px;font-weight:500;margin:0;">Fall detection</p><p style="font-size:12.5px;color:var(--text-muted);margin:2px 0 0;">MediaPipe Pose tracks posture and movement changes</p></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-bottom:1px solid #F1F5F9;">
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(30,58,138,0.1);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">✋</div>
+          <div><p style="font-size:14px;font-weight:500;margin:0;">Gesture recognition</p><p style="font-size:12.5px;color:var(--text-muted);margin:2px 0 0;">MediaPipe Hands detects Thumbs Up, Thumbs Down, Wave</p></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-bottom:1px solid #F1F5F9;">
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(30,58,138,0.1);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">😟</div>
+          <div><p style="font-size:14px;font-weight:500;margin:0;">Distress tracking</p><p style="font-size:12.5px;color:var(--text-muted);margin:2px 0 0;">MediaPipe Face Mesh computes a 0–10 pain index</p></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(30,58,138,0.1);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">🚧</div>
+          <div><p style="font-size:14px;font-weight:500;margin:0;">Hazard detection</p><p style="font-size:12.5px;color:var(--text-muted);margin:2px 0 0;">YOLOv8-nano spots obstacles in the person's path</p></div>
+        </div>
+      </div>
+      <p class="subtitle" style="margin-top:12px;">Sends JSON telemetry to Module 2 roughly 15 times per second.</p>
+    </div>
+
+    <div class="screen" id="screen-m2">
+      <h2 class="title">Module 2 — Decision Layer</h2>
+      <p class="subtitle">Reads Module 1's telemetry and decides the robot's mode</p>
+      <div class="card">
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-bottom:1px solid #F1F5F9;">
+          <div style="width:32px;height:32px;border-radius:8px;background:#D1FAE5;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">💬</div>
+          <div><p style="font-size:14px;font-weight:500;margin:0;">Conversation mode</p><p style="font-size:12.5px;color:var(--text-muted);margin:2px 0 0;">Default state during normal interaction</p></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-bottom:1px solid #F1F5F9;">
+          <div style="width:32px;height:32px;border-radius:8px;background:#FEF3C7;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">♿</div>
+          <div><p style="font-size:14px;font-weight:500;margin:0;">Accessibility mode</p><p style="font-size:12.5px;color:var(--text-muted);margin:2px 0 0;">Vision-impaired (hazard nearby) or Hearing-impaired (gesture seen)</p></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-bottom:1px solid #F1F5F9;">
+          <div style="width:32px;height:32px;border-radius:8px;background:#FEE2E2;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">🚨</div>
+          <div><p style="font-size:14px;font-weight:500;margin:0;">Safety alert</p><p style="font-size:12.5px;color:var(--text-muted);margin:2px 0 0;">Triggered by a fall or sustained high distress</p></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-bottom:1px solid #F1F5F9;">
+          <div style="width:32px;height:32px;border-radius:8px;background:#EDE9FE;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">❓</div>
+          <div><p style="font-size:14px;font-weight:500;margin:0;">Double-verification</p><p style="font-size:12.5px;color:var(--text-muted);margin:2px 0 0;">Asks "Are you okay?" before escalating a false alarm</p></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:#D1FAE5;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">😌</div>
+          <div><p style="font-size:14px;font-weight:500;margin:0;">Calm-recovery</p><p style="font-size:12.5px;color:var(--text-muted);margin:2px 0 0;">Auto-clears a Safety Alert once the person settles down</p></div>
+        </div>
+      </div>
+    </div>
 
     <!-- MODULE 3 — replaced placeholder with a real flowchart -->
     <div class="screen" id="screen-m3">
@@ -514,8 +566,60 @@
       </div>
     </div>
 
-    <div class="screen" id="screen-m4"><h2 class="title">Module 4</h2><div class="card placeholder-card"><p>Your existing Module 4 content goes here.</p></div></div>
-    <div class="screen" id="screen-m5"><h2 class="title">Module 5</h2><div class="card placeholder-card"><p>Your existing Module 5 content goes here.</p></div></div>
+    <div class="screen" id="screen-m4">
+      <h2 class="title">Module 4 — Cloud Backend</h2>
+      <p class="subtitle">Logs activity and simulates the emergency alert pathway</p>
+      <div class="card">
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-bottom:1px solid #F1F5F9;">
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(30,58,138,0.1);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">🗄️</div>
+          <div><p style="font-size:14px;font-weight:500;margin:0;">Local logging</p><p style="font-size:12.5px;color:var(--text-muted);margin:2px 0 0;">Every telemetry frame is saved to a SQLite database</p></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-bottom:1px solid #F1F5F9;">
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(30,58,138,0.1);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">🔁</div>
+          <div><p style="font-size:14px;font-weight:500;margin:0;">Digital twin</p><p style="font-size:12.5px;color:var(--text-muted);margin:2px 0 0;">Keeps a live snapshot of the robot's current status</p></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-bottom:1px solid #F1F5F9;">
+          <div style="width:32px;height:32px;border-radius:8px;background:#FEE2E2;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">📲</div>
+          <div><p style="font-size:14px;font-weight:500;margin:0;">Push notification</p><p style="font-size:12.5px;color:var(--text-muted);margin:2px 0 0;">First simulated alert sent on a confirmed emergency</p></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-bottom:1px solid #F1F5F9;">
+          <div style="width:32px;height:32px;border-radius:8px;background:#FEE2E2;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">☎️</div>
+          <div><p style="font-size:14px;font-weight:500;margin:0;">Voice call</p><p style="font-size:12.5px;color:var(--text-muted);margin:2px 0 0;">Second simulated alert path, in parallel with the push</p></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:#FEE2E2;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">💬</div>
+          <div><p style="font-size:14px;font-weight:500;margin:0;">SMS</p><p style="font-size:12.5px;color:var(--text-muted);margin:2px 0 0;">Third simulated alert path, sent alongside the call</p></div>
+        </div>
+      </div>
+      <p class="subtitle" style="margin-top:12px;">Firebase and Twilio integrations are simulated — no cloud accounts connected yet.</p>
+    </div>
+
+    <div class="screen" id="screen-m5">
+      <h2 class="title">Module 5 — Caregiver Dashboard</h2>
+      <p class="subtitle">This is the dashboard app you're using right now</p>
+      <div class="card">
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-bottom:1px solid #F1F5F9;">
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(30,58,138,0.1);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">🏠</div>
+          <div><p style="font-size:14px;font-weight:500;margin:0;">Home dashboard</p><p style="font-size:12.5px;color:var(--text-muted);margin:2px 0 0;">Elder's live status, quick links, and recent activity</p></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-bottom:1px solid #F1F5F9;">
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(30,58,138,0.1);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">🛡️</div>
+          <div><p style="font-size:14px;font-weight:500;margin:0;">Safety monitor</p><p style="font-size:12.5px;color:var(--text-muted);margin:2px 0 0;">Fall detection status and today's event timeline</p></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-bottom:1px solid #F1F5F9;">
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(30,58,138,0.1);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">❤️</div>
+          <div><p style="font-size:14px;font-weight:500;margin:0;">Wellness & analytics</p><p style="font-size:12.5px;color:var(--text-muted);margin:2px 0 0;">Mood, activity, and routine adherence trends</p></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-bottom:1px solid #F1F5F9;">
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(30,58,138,0.1);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">🧠</div>
+          <div><p style="font-size:14px;font-weight:500;margin:0;">Memory & companion</p><p style="font-size:12.5px;color:var(--text-muted);margin:2px 0 0;">Known preferences, family directory, active reminders</p></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(30,58,138,0.1);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">📞</div>
+          <div><p style="font-size:14px;font-weight:500;margin:0;">Family connect</p><p style="font-size:12.5px;color:var(--text-muted);margin:2px 0 0;">Voice messages and simulated video/phone calls</p></div>
+        </div>
+      </div>
+    </div>
 
   </div>
 </div>
